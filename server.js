@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const app = express();
@@ -14,18 +13,26 @@ app.use('/uploads', express.static(path.join(__dirname, 'public/uploads')));
 app.use('/data', express.static(path.join(__dirname, 'data')));
 app.use(express.static('public'));
 
+const mongoose = require("mongoose");
 
-['public/uploads/images', 'data'].forEach(dir => {
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error("MongoDB error:", err));
+
+const Property = require("./models/Property");
+
+['public/uploads/images'].forEach(dir => {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
-
 
 const cors = require("cors");
 
 app.use(cors({
   origin: [
-    "https://elegant-nougat-883fc3.netlify.app",
-    "https://nirvanaestates.co.in"
+    "https://nirvana-estates-static.onrender.com",
+    "https://nirvanaestates.co.in",
+    "https://nirvana-estates-backend.onrender.com"
   ],
   methods: ["GET", "POST", "DELETE"],
 }));
@@ -43,12 +50,15 @@ const storage = multer.diskStorage({
   },
 });
 
-
 const upload = multer({ storage: storage });
 
 // Admin upload route (Updated for YouTube Shorts only)
-app.post('/admin/upload-property', upload.array('images', 10), (req, res) => {
+app.post('/admin/upload-property', upload.array('images', 10), async (req, res) => {
   try {
+    // ✅ Move console.log inside route
+    console.log("REQ.BODY:", req.body);
+    console.log("REQ.FILES:", req.files);
+
     const {
       title, price, location, bedrooms, bathrooms,
       description, category, carpetArea, builtupArea, videos
@@ -58,175 +68,145 @@ app.post('/admin/upload-property', upload.array('images', 10), (req, res) => {
 
     // Handle image uploads
     const BASE_URL = process.env.BASE_URL || 'https://nirvana-estates-backend.onrender.com';
+    const images = req.files
+      ? req.files.map(f => `${BASE_URL}/uploads/images/${f.filename}`)
+      : [];
 
-const images = req.files
-  ? req.files.map(f => `${BASE_URL}/uploads/images/${f.filename}`)
-  : [];
+    // Handle YouTube video URLs
+let videoLinks = [];
+if (req.body.videos) {
+  if (Array.isArray(req.body.videos)) {
+    videoLinks = req.body.videos.filter(v => v && v.trim() !== '');
+  } else if (req.body.videos.trim() !== '') {
+    videoLinks = [req.body.videos.trim()];
+  }
+}
 
 
-    // ✅ Handle YouTube video URLs
-    let videoLinks = [];
-    if (videos) {
-      videoLinks = Array.isArray(videos) ? videos : [videos];
-    }
-
+    // ✅ Safe number parsing
     const property = {
-      id: Date.now(),
       title,
-      price,
+      price: Number(price) || 0,
       negotiable,
       location,
-      bedrooms: Number(bedrooms),
-      bathrooms: Number(bathrooms),
+      bedrooms: Number(bedrooms) || 0,
+      bathrooms: Number(bathrooms) || 0,
       description,
       category,
-      carpetArea,
-      builtupArea,
+      carpetArea: Number(carpetArea) || 0,
+      builtupArea: Number(builtupArea) || 0,
       images,
-      videos: videoLinks, // YouTube links only
+      videos: videoLinks,
     };
 
-    const dataFile = path.join(__dirname, 'data/properties.json');
-    let properties = [];
+    console.log("Parsed property object:", property);
 
-    if (fs.existsSync(dataFile)) {
-      const fileContent = fs.readFileSync(dataFile, 'utf-8');
-      if (fileContent) properties = JSON.parse(fileContent);
-    }
-
-    properties.push(property);
-    fs.writeFileSync(dataFile, JSON.stringify(properties, null, 2));
+    await Property.create(property);
 
     res.send("Property uploaded successfully (YouTube Shorts version)!");
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Error uploading property.");
-  }
-});
-
-
-// Delete property by ID
-app.delete('/admin/delete-property/:id', (req, res) => {
-  const id = req.params.id;
-  const dataFile = path.join(__dirname, 'data/properties.json');
-
-  if (!fs.existsSync(dataFile)) {
-    return res.status(404).json({ success: false, message: "No properties found" });
-  }
-
-  let properties = JSON.parse(fs.readFileSync(dataFile, 'utf-8'));
-  const propertyToDelete = properties.find(p => String(p.id) === id);
-
-  if (!propertyToDelete) {
-    return res.status(404).json({ success: false, message: "Property not found" });
-  }
-
-  // Remove uploaded images
-  if (propertyToDelete.images) {
-  propertyToDelete.images.forEach(imgUrl => {
-    const filename = imgUrl.split('/uploads/images/')[1];
-    if (!filename) return;
-
-    const fullPath = path.join(__dirname, 'public/uploads/images', filename);
-    if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-  });
+  console.error("Upload Error:", err);
+  res.status(500).json({ success: false, message: "Error uploading property.", error: err.message });
 }
 
-  // Remove from JSON
-  properties = properties.filter(p => String(p.id) !== id);
-  fs.writeFileSync(dataFile, JSON.stringify(properties, null, 2));
+});
 
-  res.json({ success: true, message: "Property deleted successfully" });
+// Delete property by ID
+app.delete('/admin/delete-property/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const property = await Property.findById(id);
+    if (!property) {
+      return res.status(404).json({ success: false, message: "Property not found" });
+    }
+
+    // Delete images from disk
+    if (property.images) {
+      property.images.forEach(imgUrl => {
+        const filename = imgUrl.split('/uploads/images/')[1];
+        if (!filename) return;
+
+        const fullPath = path.join(__dirname, 'public/uploads/images', filename);
+        if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+      });
+    }
+
+    await Property.findByIdAndDelete(id);
+
+    res.json({ success: true, message: "Property deleted successfully" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Delete failed" });
+  }
 });
 
 
-// // 💌 Seller Form Route (Add Here)
-// app.post("/submit-seller", async (req, res) => {
-//   const { name, phone, email, type, location, description } = req.body;
-//   const nodemailer = require("nodemailer");
+app.post("/api/seller", async (req, res) => {
+  try {
+    const { name, phone, email, type, location, description } = req.body;
 
-//   const transporter = nodemailer.createTransport({
-//     service: "gmail",
-//     auth: {
-//       user: process.env.EMAIL_USER,
-//       pass: process.env.EMAIL_PASS,
-//     },
-//   });
+    console.log("New Seller Lead:", req.body);
 
-//   const mailOptions = {
-//     from: process.env.EMAIL_USER,
-//     to: "nirvanaestatess@gmail.com",
-//     subject: `New Seller/Rental Property Submission - ${type}`,
-//     html: `
-//       <h2>New Property Submission</h2>
-//       <p><strong>Name:</strong> ${name}</p>
-//       <p><strong>Phone:</strong> ${phone}</p>
-//       <p><strong>Email:</strong> ${email}</p>
-//       <p><strong>Type:</strong> ${type}</p>
-//       <p><strong>Location:</strong> ${location}</p>
-//       <p><strong>Description:</strong> ${description}</p>
-//     `,
-//   };
+    // Later you can:
+    // 1. Save to MongoDB
+    // 2. Send email via Nodemailer
 
-//   try {
-//     await transporter.sendMail(mailOptions);
-//     res.status(200).json({ success: true });
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ success: false });
-//   }
-// });
+    // res.json({ success: true, message: "Seller data received" });
+    res.status(201).json({ success: true, message: "Seller data received" });
+  } catch (err) {
+    console.error("Seller Error:", err);
+    res.status(500).json({ success: false });
+  }
+});
+
+// Existing seller form route and sitemap unchanged...
 
 // Dynamic sitemap.xml route
+app.get('/sitemap.xml', async (req, res) => {
+  try {
+    const baseUrls = [
+      'https://nirvanaestates.co.in/',
+      'https://nirvanaestates.co.in/about.html',
+      'https://nirvanaestates.co.in/contact.html',
+      'https://nirvanaestates.co.in/properties.html'
+    ];
 
-// Dynamic sitemap.xml
-app.get('/sitemap.xml', (req, res) => {
-  const baseUrls = [
-    'https://nirvanaestates.co.in/',
-    'https://nirvanaestates.co.in/about.html',
-    'https://nirvanaestates.co.in/contact.html',
-    'https://nirvanaestates.co.in/properties.html'
-  ];
+    const properties = await Property.find({}, "_id");
 
-  const dataFile = path.join(__dirname, 'data/properties.json');
-  let propertyUrls = [];
+    const propertyUrls = properties.map(p =>
+      `https://nirvanaestates.co.in/property-details.html?id=${p._id}`
+    );
 
-  if (fs.existsSync(dataFile)) {
-    const fileContent = fs.readFileSync(dataFile, 'utf-8');
-    if (fileContent) {
-      const properties = JSON.parse(fileContent);
-      propertyUrls = properties.map(p => `https://nirvanaestates.co.in/properties/${p.id}`);
-    }
-  }
+    const urls = [...baseUrls, ...propertyUrls];
 
-  const urls = [...baseUrls, ...propertyUrls];
-
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map(url => `
-  <url>
+${urls.map(url => `  <url>
     <loc>${url}</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>`).join('')}
 </urlset>`;
 
-  res.header('Content-Type', 'application/xml');
-  res.send(sitemap);
+    res.header('Content-Type', 'application/xml');
+    res.send(sitemap);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error generating sitemap');
+  }
 });
 
-app.get("/api/properties", (req, res) => {
-  const dataFile = path.join(__dirname, "data/properties.json");
-
-  if (!fs.existsSync(dataFile)) {
-    return res.json([]);
+app.get("/api/properties", async (req, res) => {
+  try {
+    const properties = await Property.find().sort({ createdAt: -1 });
+    res.json(properties);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json([]);
   }
-
-  const data = JSON.parse(fs.readFileSync(dataFile, "utf-8"));
-  res.json(data);
 });
 
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log("Server running on port", PORT));
-

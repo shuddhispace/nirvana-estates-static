@@ -8,53 +8,43 @@
 <style>
   body { background-color: #f9fafb; }
 
-  /* Shorts-style gallery */
-  .carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; gap: 1rem; padding: 0.5rem 0; }
+  /* Carousel / Gallery */
+  .carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 1rem; padding: 0.5rem 0; -webkit-overflow-scrolling: touch; }
   .carousel::-webkit-scrollbar { display: none; }
-  .carousel-item {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-    border-radius: 0.75rem;
-    overflow: hidden;
-    position: relative;
-    width: 250px;
-    height: 450px; /* YouTube shorts aspect ratio look */
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .carousel-item img,
-  .carousel-item video,
-  .carousel-item iframe { width: 100%; height: 100%; object-fit: cover; border-radius: 0.75rem; }
-
-  /* Buttons */
-  .cta-btn { padding: .5rem 1rem; border-radius: .5rem; font-weight: 600; transition: all 0.2s; }
-  .cta-call { background-color: #0f2b3d; color: #fff; }
-  .cta-call:hover { background-color: #15425c; }
-  .cta-wa { background-color: #22c55e; color: #fff; }
-  .cta-wa:hover { background-color: #16a34a; }
-
-  .floating-call {
-    position: fixed; bottom: 1rem; right: 1rem;
-    background-color: #0f2b3d; color: #fff; padding: .75rem 1rem;
-    border-radius: 9999px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,.2); z-index: 50;
-    transition: background 0.2s;
-  }
-  .floating-call:hover { background-color: #15425c; }
+  .carousel-item { flex: 0 0 auto; scroll-snap-align: start; border-radius: 0.75rem; overflow: hidden; background: #000; position: relative; width: 250px; height: 450px; display: flex; align-items: center; justify-content: center; }
+  .carousel-item img, .carousel-item iframe, .carousel-item video { width: 100%; height: 100%; object-fit: cover; border-radius: 0.75rem; }
 
   /* Info grid */
   .info-card { background: #fff; border-radius: 1rem; padding: 1rem; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
   .info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; }
   @media(min-width:1024px){ .info-grid { grid-template-columns: repeat(3,1fr); } }
-  .badge { background-color: #22c55e; color: #fff; padding: .25rem .5rem; border-radius: .375rem; font-size: 0.75rem; font-weight: 600; }
+  .info-grid div span { font-weight: 600; }
+
+  /* CTA Buttons */
+  .cta-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; }
+  .cta-call { background-color: #0f2b3d; color: #fff; }
+  .cta-call:hover { background-color: #15425c; }
+  .cta-wa { background-color: #22c55e; color: #fff; }
+  .cta-wa:hover { background-color: #16a34a; }
+
+  .floating-call { position: fixed; bottom: 1rem; right: 1rem; background-color: #0f2b3d; color: #fff; padding: 0.75rem 1rem; border-radius: 9999px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,.2); z-index: 50; transition: background 0.2s; }
+  .floating-call:hover { background-color: #15425c; }
+
+  /* Text & Typography */
+  .prose { max-width: 100%; line-height: 1.6; }
+
+  @media(min-width:1024px){
+  .carousel{
+    overflow-x: hidden;
+  }
+}
+
 </style>
 </head>
 <body class="text-gray-800">
 
 <!-- Header -->
 <div id="header-placeholder"></div>
-
 <script>
   fetch('header_main.html')
     .then(response => response.text())
@@ -143,10 +133,9 @@
     .catch(err => console.error('Failed to load header:', err));
 </script>
 
-
 <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-  <!-- Shorts-style Gallery -->
+  <!-- Gallery -->
   <section id="gallery"></section>
 
   <!-- Title & Price -->
@@ -155,7 +144,6 @@
       <h2 id="property-title" class="text-2xl md:text-3xl font-bold">Property Title</h2>
       <span id="property-price" class="text-[#0f2b3d] font-extrabold text-xl md:text-2xl"></span>
     </div>
-    <div id="badges" class="flex gap-2"></div>
   </section>
 
   <!-- Info Grid -->
@@ -181,11 +169,101 @@
 <a href="tel:+917039199717" class="floating-call">📞 Call Now</a>
 
 
-  <!-- FOOTER PLACEHOLDER -->
-  <div id="footer-placeholder"></div>
-<!-- footer.html -->
-<footer class="relative text-white">
 
+<script>
+const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+const BACKEND = "https://nirvana-estates-backend.onrender.com";
+
+function fixMediaUrl(src){
+  if(!src) return '';
+  if(src.startsWith('http')) return src;
+  return `${BACKEND}/${src.replace(/^\/+/, '')}`;
+}
+
+
+// Create gallery slide
+function createSlide(src,type){
+  const wrap = document.createElement('div');
+  wrap.className = 'carousel-item';
+ if(type==='image'){
+  const img = new Image();
+  img.src = fixMediaUrl(src);
+  img.loading = 'lazy';
+  wrap.appendChild(img);
+}
+
+
+  else{
+    if(src.includes('youtube.com') || src.includes('youtu.be')){
+      let videoId='';
+      if(src.includes('shorts/')) videoId=src.split('shorts/')[1].split('?')[0];
+      else if(src.includes('youtu.be/')) videoId=src.split('youtu.be/')[1].split('?')[0];
+      else if(src.includes('watch?v=')) videoId=src.split('watch?v=')[1].split('&')[0];
+      const iframe = document.createElement('iframe');
+      // iframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=0`;
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
+      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen = true;
+      wrap.appendChild(iframe);
+    } else {
+      const vid = document.createElement('video'); vid.src=src; vid.preload='metadata'; vid.muted=true; vid.playsInline=true; vid.controls=true;
+      wrap.appendChild(vid);
+    }
+  }
+  return wrap;
+}
+
+// Load property details
+async function loadDetails() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  try {
+    const res = await fetch('https://nirvana-estates-backend.onrender.com/api/properties');
+    const all = await res.json();
+    const p = all.find(x => String(x._id) === String(id));
+    if(!p){ document.getElementById('gallery').innerHTML='<p class="text-red-600">Property not found.</p>'; return; }
+
+    // Gallery
+    const gallery = document.getElementById('gallery'); gallery.innerHTML='';
+    const track = document.createElement('div'); track.className='carousel';
+    const media = [
+      ...(Array.isArray(p.images)? p.images.map(s=>({src:s,type:'image'})) : []),
+      ...(Array.isArray(p.videos)? p.videos.map(s=>({src:s,type:'video'})) : [])
+    ];
+    if(media.length===0){
+      const ph = document.createElement('div'); ph.className='w-full h-64 flex items-center justify-center bg-gray-200 text-gray-500 rounded'; ph.textContent='No media'; track.appendChild(ph);
+    } else { media.forEach(m=>track.appendChild(createSlide(m.src,m.type))); }
+    gallery.appendChild(track);
+
+    // Title & Price
+    document.getElementById('property-title').textContent = p.title || 'Property';
+    document.getElementById('property-price').textContent = INR.format(p.price);
+
+    // Info grid
+    const infoGrid = document.getElementById('info-grid'); infoGrid.innerHTML='';
+    const cell = (label,value)=>{ const d=document.createElement('div'); d.innerHTML=`<span>${label}:</span> ${value}`; return d; };
+    infoGrid.append(
+      cell('Bedrooms', p.bedrooms),
+      cell('Bathrooms', p.bathrooms),
+      cell('Carpet Area', `${p.carpetArea} sq ft`),
+      ...(p.builtupArea && p.builtupArea.trim() !== '' ? [cell('Built-up Area', `${p.builtupArea} sq ft`)] : []),
+      cell('Location', p.location),
+      cell('Category', p.category || '-')
+    );
+
+    // Description
+    document.getElementById('property-desc').textContent = p.description || '-';
+
+    // CTA
+    document.getElementById('call-btn').href = 'tel:+917039199717';
+    document.getElementById('wa-btn').href = 'https://wa.me/917039199717?text=' + encodeURIComponent(`I am interested in property ID: ${p._id}`);
+  } catch(e){ console.error(e); document.getElementById('gallery').innerHTML='<p class="text-red-600">Failed to load property.</p>'; }
+}
+
+loadDetails();
+</script>
+
+<!-- Footer -->
   <!-- Copyright Bar -->
   <div class="bg-[#0f2b3d] text-gray-300 text-center text-sm py-4">
     © <span id="year"></span> Nirvana Estates. All rights reserved.
@@ -196,122 +274,5 @@
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 </script>
-<script>
-// Create Shorts-style slide
-function createSlide(src,type){
-  const wrap=document.createElement('div'); wrap.className='carousel-item';
-  if(type==='image'){ const img=new Image(); img.src=src; img.alt='Property Image'; wrap.appendChild(img); }
-  else{
-    if(src.includes('youtube.com') || src.includes('youtu.be')){
-      let videoId='';
-      if(src.includes('shorts/')) videoId=src.split('shorts/')[1].split('?')[0];
-      else if(src.includes('youtu.be/')) videoId=src.split('youtu.be/')[1].split('?')[0];
-      else if(src.includes('watch?v=')) videoId=src.split('watch?v=')[1].split('&')[0];
-      const iframe=document.createElement('iframe');
-      iframe.src=`https://www.youtube.com/embed/${videoId}?rel=0&autoplay=0`;
-      iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen=true;
-      wrap.appendChild(iframe);
-    } else {
-      const vid=document.createElement('video'); vid.src=src; vid.preload='metadata'; vid.muted=true; vid.playsInline=true; vid.controls=true;
-      wrap.appendChild(vid);
-    }
-  }
-  return wrap;
-}
-
-const INR = new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR'
-});
-
-// Load property details
-async function loadDetails() {
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
-
-  try {
-    const res = await fetch('https://nirvana-estates-backend.onrender.com/api/properties');
-    const all = await res.json();
-
-    const p = all.find(x => String(x.id) === String(id));
-
-    if (!p) {
-      document.getElementById('gallery').innerHTML =
-        '<p class="text-red-600">Property not found.</p>';
-      return;
-    }
-
-    // Gallery
-    const gallery = document.getElementById('gallery');
-    gallery.innerHTML = '';
-    const track = document.createElement('div');
-    track.className = 'carousel';
-
-    const media = [
-      ...(Array.isArray(p.images) ? p.images.map(s => ({ src: s, type: 'image' })) : []),
-      ...(Array.isArray(p.videos) ? p.videos.map(s => ({ src: s, type: 'video' })) : [])
-    ];
-
-    if (media.length === 0) {
-      const ph = document.createElement('div');
-      ph.className = 'w-full h-64 flex items-center justify-center bg-gray-200 text-gray-500 rounded';
-      ph.textContent = 'No media';
-      track.appendChild(ph);
-    } else {
-      media.forEach(m => track.appendChild(createSlide(m.src, m.type)));
-    }
-
-    gallery.appendChild(track);
-
-    // Title & Price
-    document.getElementById('property-title').textContent = p.title || 'Property';
-    document.getElementById('property-price').textContent = INR.format(p.price);
-
-    // Info Grid
-    const infoGrid = document.getElementById('info-grid');
-    infoGrid.innerHTML = '';
-
-    const cell = (label, value) => {
-      const d = document.createElement('div');
-      d.innerHTML = `<span class="font-semibold">${label}:</span> ${value}`;
-      return d;
-    };
-
-    infoGrid.append(
-      cell('Bedrooms', p.bedrooms),
-      cell('Bathrooms', p.bathrooms),
-      cell('Carpet Area', `${p.carpetArea} sq ft`)
-    );
-
-    if (p.builtupArea && p.builtupArea.trim() !== '') {
-      infoGrid.append(cell('Built-up Area', `${p.builtupArea} sq ft`));
-    }
-
-    infoGrid.append(
-      cell('Location', p.location),
-      cell('Category', p.category || '-')
-    );
-
-    // Description
-    document.getElementById('property-desc').textContent = p.description || '-';
-
-    // CTA
-    document.getElementById('call-btn').href = 'tel:+917039199717';
-    document.getElementById('wa-btn').href =
-      'https://wa.me/917039199717?text=' +
-      encodeURIComponent(`I am interested in property ID: ${p.id}`);
-
-  } catch (e) {
-    console.error(e);
-    document.getElementById('gallery').innerHTML =
-      '<p class="text-red-600">Failed to load property.</p>';
-  }
-}
-
-
-loadDetails();
-</script>
-
 </body>
 </html>

@@ -6,46 +6,25 @@
 <title>Buyers - Nirvana Estates</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body { background-color: #f9fafb; }
+body { background-color: #f9fafb; }
+.card { transition: transform .3s, box-shadow .3s; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,.15); }
+.carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0.75rem; padding: 0.5rem 0; -webkit-overflow-scrolling: touch; }
+.carousel::-webkit-scrollbar { display: none; }
+.carousel-item { flex: 0 0 100%; scroll-snap-align: start; display: flex; justify-content: center; align-items: center; }
+.short-media { width: auto; max-width: 280px; height: 500px; object-fit: cover; border-radius: 0.75rem; box-shadow: 0 6px 18px rgba(0,0,0,0.1); transition: transform .3s; }
+.short-media:hover { transform: scale(1.02); }
+@media(min-width:1024px){ #grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 1.5rem; } .short-media { max-width: 100%; height: 350px; } .card-body { display: flex; flex-direction: column; gap:0.5rem; } }
+.carousel{
+  cursor: grab;
+}
+.carousel:active{
+  cursor: grabbing;
+}
+.carousel{
+  scroll-behavior: smooth;
+}
 
-  .card { transition: transform .3s, box-shadow .3s; }
-  .card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,.15); }
-
-  .carousel {
-    display: flex;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-  }
-  .carousel::-webkit-scrollbar { display: none; }
-
-  .carousel-item {
-    flex: 0 0 100%; /* One media per frame on mobile */
-    scroll-snap-align: start;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
-
-  .short-media {
-    width: auto;
-    max-width: 280px;
-    height: 500px;
-    object-fit: cover;
-    border-radius: 0.75rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.1);
-    transition: transform .3s;
-  }
-  .short-media:hover { transform: scale(1.02); }
-
-  @media(min-width:1024px){
-    /* Desktop: grid with 3 cards per row */
-    #grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-    .short-media { max-width: 100%; height: 350px; }
-    .card-body { display: flex; flex-direction: column; gap:0.5rem; }
-  }
 </style>
 </head>
 <body class="text-gray-800">
@@ -139,7 +118,6 @@
     .catch(err => console.error('Failed to load header:', err));
 </script>
 
-
 <main class="max-w-7xl mx-auto px-4 py-6">
   <h2 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Properties for Buyers</h2>
   <div id="grid" class="grid grid-cols-1 sm:grid-cols-1 lg:grid-cols-3 gap-6"></div>
@@ -152,23 +130,31 @@
 <script>
 const INR = n => Number(n).toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 
+const BACKEND = "https://nirvana-estates-backend.onrender.com";
+
+function fixMediaUrl(src){
+  if(!src) return '';
+  if(src.startsWith('http')) return src;
+  return `${BACKEND}/${src.replace(/^\/+/, '')}`;
+}
+
+
 function createMediaSlide(src,type){
   const div=document.createElement('div');
   div.className='carousel-item';
-
   if(type==='image'){
     const img=document.createElement('img');
-    img.src=src; img.alt='Property Image';
+    img.src = fixMediaUrl(src); img.alt='Property Image'; img.loading='lazy';
     img.className='short-media';
     div.appendChild(img);
-  } else if(type==='video' || src.includes('youtube.com') || src.includes('youtu.be')){
+  } else {
     let videoId='';
     if(src.includes('shorts/')) videoId=src.split('shorts/')[1].split('?')[0];
     else if(src.includes('youtu.be/')) videoId=src.split('youtu.be/')[1].split('?')[0];
     else if(src.includes('watch?v=')) videoId=src.split('watch?v=')[1].split('&')[0];
-
     const iframe=document.createElement('iframe');
-    iframe.src=`https://www.youtube.com/embed/${videoId}?rel=0&autoplay=0`;
+    // iframe.src=`https://www.youtube.com/embed/${videoId}?rel=0&autoplay=0`;
+    iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
     iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
     iframe.allowFullscreen=true;
     iframe.className='short-media';
@@ -180,110 +166,42 @@ function createMediaSlide(src,type){
 function propertyCard(p){
   const card=document.createElement('article');
   card.className='card bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition-shadow flex flex-col';
+  const carouselContainer=document.createElement('div'); carouselContainer.className='carousel-container';
+  const carousel=document.createElement('div'); carousel.className='carousel';
+  const allMedia=[...(p.images||[]).map(s=>({src:s,type:'image'})), ...(p.videos||[]).map(s=>({src:s,type:'video'}))];
+  if(allMedia.length===0){ const ph=document.createElement('div'); ph.className='w-full h-48 flex items-center justify-center text-gray-400 bg-gray-200 rounded-xl'; ph.textContent='No media'; carousel.appendChild(ph); }
+  else allMedia.forEach(m=>carousel.appendChild(createMediaSlide(m.src,m.type)));
+  carouselContainer.appendChild(carousel); card.appendChild(carouselContainer);
 
-  // Carousel container
-  const carouselContainer=document.createElement('div');
-  carouselContainer.className='carousel-container';
-  const carousel=document.createElement('div');
-  carousel.className='carousel';
-
-  const allMedia=[...(Array.isArray(p.images)? p.images.map(s=>({src:s,type:'image'})):[]),
-                  ...(Array.isArray(p.videos)? p.videos.map(s=>({src:s,type:'video'})):[])];
-
-  if(allMedia.length===0){
-    const placeholder=document.createElement('div');
-    placeholder.className='w-full h-48 flex items-center justify-center text-gray-400 bg-gray-200 rounded-xl';
-    placeholder.textContent='No media';
-    carousel.appendChild(placeholder);
-  } else { allMedia.forEach(m=>carousel.appendChild(createMediaSlide(m.src,m.type))); }
-
-  carouselContainer.appendChild(carousel);
-  card.appendChild(carouselContainer);
-
-  // Card body
-  const body=document.createElement('div');
-  body.className='card-body p-4 flex flex-col gap-3';
-
-  const title=document.createElement('h3');
-  title.className='text-lg font-semibold text-gray-900';
-  title.textContent=p.title||'Property';
-
-  const price=document.createElement('span');
-  price.className='text-[#0f2b3d] font-bold';
-  price.textContent=INR(p.price);
-
-  const sub=document.createElement('p');
-  sub.className='text-gray-600 text-sm';
-  // sub.textContent=`${p.bedrooms} Bed | ${p.bathrooms} Bath | Carpet: ${p.carpetArea} sq ft | Built-up: ${p.builtupArea} sq ft | ${p.location}`;
-
-let builtupText =
-  p.builtupArea && p.builtupArea.trim() !== ""
-    ? ` | Built-up: ${p.builtupArea} sq ft`
-    : "";
-
-sub.textContent =
-  `${p.bedrooms} Bed | ${p.bathrooms} Bath | ` +
-  `Carpet: ${p.carpetArea} sq ft` +
-  `${builtupText} | ${p.location}`;
-
-
-
-const badgeRow=document.createElement('div');
-// Removed negotiable badge completely
-
-
-  // const badgeRow=document.createElement('div');
-  // if(p.negotiable){
-  //   const badge=document.createElement('span');
-  //   badge.className='inline-block bg-green-600 text-white text-xs px-2 py-1 rounded';
-  //   badge.textContent='Negotiable';
-  //   badgeRow.appendChild(badge);
-  // }
-
-  const ctaRow=document.createElement('div');
-  ctaRow.className='mt-2 flex flex-wrap gap-2';
-  const details=document.createElement('a');
-  details.href=`property-details.html?id=${p.id}`;
-  details.target='_blank';
-  details.className='px-3 py-2 rounded bg-[#0f2b3d] text-white text-sm font-semibold hover:bg-[#15425c]';
-  details.textContent='View Details';
-  const call=document.createElement('a');
-  call.href='tel:+917039199717';
-  call.className='px-3 py-2 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700';
-  call.textContent='Call';
+  const body=document.createElement('div'); body.className='card-body p-4 flex flex-col gap-3';
+  const title=document.createElement('h3'); title.className='text-lg font-semibold text-gray-900'; title.textContent=p.title||'Property';
+  const price=document.createElement('span'); price.className='text-[#0f2b3d] font-bold'; price.textContent=INR(p.price);
+  const sub=document.createElement('p'); sub.className='text-gray-600 text-sm';
+  let builtupText = p.builtupArea ? ` | Built-up: ${p.builtupArea} sq ft` : '';
+  sub.textContent=`${p.bedrooms} Bed | ${p.bathrooms} Bath | Carpet: ${p.carpetArea} sq ft${builtupText} | ${p.location}`;
+  
+  const ctaRow=document.createElement('div'); ctaRow.className='mt-2 flex flex-wrap gap-2';
+  const details=document.createElement('a'); details.href=`property-details.html?id=${p._id}`;details.target='_blank'; details.className='px-3 py-2 rounded bg-[#0f2b3d] text-white text-sm font-semibold hover:bg-[#15425c]'; details.textContent='View Details';
+  const call=document.createElement('a'); call.href='tel:+917039199717'; call.className='px-3 py-2 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700'; call.textContent='Call';
   ctaRow.append(details,call);
 
-  body.append(title,price,sub,badgeRow,ctaRow);
-  card.appendChild(body);
-
+  body.append(title,price,sub,ctaRow); card.appendChild(body);
   return card;
 }
 
 async function load(){
   try{
     const BACKEND = "https://nirvana-estates-backend.onrender.com";
-
-const res = await fetch(`${BACKEND}/api/properties`);
-
-    const list=await res.json();
-    const grid=document.getElementById('grid');
-    grid.innerHTML='';
+    const res = await fetch(`${BACKEND}/api/properties`);
+    const list = await res.json();
+    const grid = document.getElementById('grid'); grid.innerHTML='';
     list.filter(p=> (p.category||'').toLowerCase()==='buyers').forEach(p=> grid.appendChild(propertyCard(p)));
-  } catch(e){
-    console.error(e);
-    document.getElementById('grid').innerHTML='<div class="text-red-600">Failed to load properties.</div>';
-  }
+  } catch(e){ console.error(e); document.getElementById('grid').innerHTML='<div class="text-red-600">Failed to load properties.</div>'; }
 }
-
 load();
 </script>
 
-
-  <!-- FOOTER PLACEHOLDER -->
-  <div id="footer-placeholder"></div>
-<!-- footer.html -->
-<footer class="relative text-white">
-
+<!-- Footer -->
   <!-- Copyright Bar -->
   <div class="bg-[#0f2b3d] text-gray-300 text-center text-sm py-4">
     © <span id="year"></span> Nirvana Estates. All rights reserved.
@@ -294,6 +212,5 @@ load();
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
 </script>
-
 </body>
 </html>
