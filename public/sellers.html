@@ -163,14 +163,7 @@ fetch('header_main.html')
 
     <!-- FORM -->
     <form id="sellerForm"
-      name="seller-property"
-      method="POST"
-      data-netlify="true"
-      netlify-honeypot="bot-field"
       class="space-y-5 text-left">
-
-      <input type="hidden" name="form-name" value="seller-property">
-      <input type="hidden" name="bot-field">
 
       <div class="glass p-4">
         <input type="text" name="name" placeholder="Full Name *" required>
@@ -220,11 +213,23 @@ form.addEventListener("submit", async e => {
   form.classList.add("hidden");
   loader.classList.remove("hidden");
 
+  const data = Object.fromEntries(new FormData(form));
+
   try {
-    const res = await fetch("/", { method: "POST", body: new FormData(form) });
+    const res = await fetch("https://api.nirvanaestates.co.in/api/seller", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
+
     loader.classList.add("hidden");
-    res.ok ? successMsg.classList.remove("hidden") : errorMsg.classList.remove("hidden");
-  } catch {
+
+    if (res.ok) {
+      successMsg.classList.remove("hidden");
+    } else {
+      errorMsg.classList.remove("hidden");
+    }
+  } catch (err) {
     loader.classList.add("hidden");
     errorMsg.classList.remove("hidden");
   }
