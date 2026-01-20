@@ -172,27 +172,12 @@
 
 <script>
 const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
-const BACKEND = "https://nirvana-estates-backend.onrender.com";
-
-function fixMediaUrl(src){
-  if(!src) return '';
-  if(src.startsWith('http')) return src;
-  return `${BACKEND}/${src.replace(/^\/+/, '')}`;
-}
-
 
 // Create gallery slide
 function createSlide(src,type){
   const wrap = document.createElement('div');
   wrap.className = 'carousel-item';
- if(type==='image'){
-  const img = new Image();
-  img.src = fixMediaUrl(src);
-  img.loading = 'lazy';
-  wrap.appendChild(img);
-}
-
-
+  if(type==='image'){ const img = new Image(); img.src=src; wrap.appendChild(img); }
   else{
     if(src.includes('youtube.com') || src.includes('youtu.be')){
       let videoId='';
@@ -217,47 +202,107 @@ function createSlide(src,type){
 async function loadDetails() {
   const params = new URLSearchParams(location.search);
   const id = params.get('id');
+
+  if (!id) {
+    document.getElementById('gallery').innerHTML =
+      '<p class="text-red-600">Invalid property ID.</p>';
+    return;
+  }
+
   try {
     const res = await fetch('https://nirvana-estates-backend.onrender.com/api/properties');
+    if (!res.ok) throw new Error('API failed');
+
     const all = await res.json();
     const p = all.find(x => String(x._id) === String(id));
-    if(!p){ document.getElementById('gallery').innerHTML='<p class="text-red-600">Property not found.</p>'; return; }
 
-    // Gallery
-    const gallery = document.getElementById('gallery'); gallery.innerHTML='';
-    const track = document.createElement('div'); track.className='carousel';
+    if (!p) {
+      document.getElementById('gallery').innerHTML =
+        '<p class="text-red-600">Property not found.</p>';
+      return;
+    }
+
+    /* ---------- Gallery ---------- */
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = '';
+
+    const track = document.createElement('div');
+    track.className = 'carousel';
+
     const media = [
-      ...(Array.isArray(p.images)? p.images.map(s=>({src:s,type:'image'})) : []),
-      ...(Array.isArray(p.videos)? p.videos.map(s=>({src:s,type:'video'})) : [])
+      ...(Array.isArray(p.images) ? p.images.map(s => ({ src: s, type: 'image' })) : []),
+      ...(Array.isArray(p.videos) ? p.videos.map(s => ({ src: s, type: 'video' })) : [])
     ];
-    if(media.length===0){
-      const ph = document.createElement('div'); ph.className='w-full h-64 flex items-center justify-center bg-gray-200 text-gray-500 rounded'; ph.textContent='No media'; track.appendChild(ph);
-    } else { media.forEach(m=>track.appendChild(createSlide(m.src,m.type))); }
+
+    if (media.length) {
+      media.forEach(m => track.appendChild(createSlide(m.src, m.type)));
+    } else {
+      const ph = document.createElement('div');
+      ph.className =
+        'w-full h-64 flex items-center justify-center bg-gray-200 text-gray-500 rounded';
+      ph.textContent = 'No media available';
+      track.appendChild(ph);
+    }
+
     gallery.appendChild(track);
 
-    // Title & Price
-    document.getElementById('property-title').textContent = p.title || 'Property';
-    document.getElementById('property-price').textContent = INR.format(p.price);
+    /* ---------- Title ---------- */
+    document.getElementById('property-title').textContent =
+      p.title || 'Property';
 
-    // Info grid
-    const infoGrid = document.getElementById('info-grid'); infoGrid.innerHTML='';
-    const cell = (label,value)=>{ const d=document.createElement('div'); d.innerHTML=`<span>${label}:</span> ${value}`; return d; };
-    infoGrid.append(
-      cell('Bedrooms', p.bedrooms),
-      cell('Bathrooms', p.bathrooms),
-      cell('Carpet Area', `${p.carpetArea} sq ft`),
-      ...(p.builtupArea && p.builtupArea.trim() !== '' ? [cell('Built-up Area', `${p.builtupArea} sq ft`)] : []),
-      cell('Location', p.location),
-      cell('Category', p.category || '-')
-    );
+    /* ---------- Price (only if valid) ---------- */
+    const priceEl = document.getElementById('property-price');
+    if (p.price && Number(p.price) > 0) {
+      priceEl.textContent = INR.format(p.price);
+      priceEl.classList.remove('hidden');
+    } else {
+      priceEl.textContent = '';
+      priceEl.classList.add('hidden');
+    }
 
-    // Description
-    document.getElementById('property-desc').textContent = p.description || '-';
+    /* ---------- Info Grid ---------- */
+    const infoGrid = document.getElementById('info-grid');
+    infoGrid.innerHTML = '';
 
-    // CTA
+    const cell = (label, value) => {
+      const d = document.createElement('div');
+      d.innerHTML = `<span>${label}:</span> ${value}`;
+      return d;
+    };
+
+    if (p.bedrooms && Number(p.bedrooms) > 0)
+      infoGrid.appendChild(cell('Bedrooms', p.bedrooms));
+
+    if (p.bathrooms && Number(p.bathrooms) > 0)
+      infoGrid.appendChild(cell('Bathrooms', p.bathrooms));
+
+    if (p.carpetArea)
+      infoGrid.appendChild(cell('Carpet Area', `${p.carpetArea} sq ft`));
+
+    if (p.builtupArea)
+      infoGrid.appendChild(cell('Built-up Area', `${p.builtupArea} sq ft`));
+
+    if (p.location)
+      infoGrid.appendChild(cell('Location', p.location));
+
+    if (p.category)
+      infoGrid.appendChild(cell('Category', p.category));
+
+    /* ---------- Description ---------- */
+    document.getElementById('property-desc').textContent =
+      p.description || 'No description provided.';
+
+    /* ---------- CTA ---------- */
     document.getElementById('call-btn').href = 'tel:+917039199717';
-    document.getElementById('wa-btn').href = 'https://wa.me/917039199717?text=' + encodeURIComponent(`I am interested in property ID: ${p._id}`);
-  } catch(e){ console.error(e); document.getElementById('gallery').innerHTML='<p class="text-red-600">Failed to load property.</p>'; }
+    document.getElementById('wa-btn').href =
+      'https://wa.me/917039199717?text=' +
+      encodeURIComponent(`I am interested in property: ${p.title || p._id}`);
+
+  } catch (e) {
+    console.error(e);
+    document.getElementById('gallery').innerHTML =
+      '<p class="text-red-600">Failed to load property details.</p>';
+  }
 }
 
 loadDetails();

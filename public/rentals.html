@@ -165,28 +165,98 @@ function createMediaSlide(src,type){
 }
 
 function propertyCard(p){
-  const card=document.createElement('article');
-  card.className='card bg-white rounded-xl overflow-hidden shadow hover:shadow-lg transition-shadow flex flex-col';
-  const carouselContainer=document.createElement('div'); carouselContainer.className='carousel-container';
-  const carousel=document.createElement('div'); carousel.className='carousel';
-  const allMedia=[...(p.images||[]).map(s=>({src:s,type:'image'})), ...(p.videos||[]).map(s=>({src:s,type:'video'}))];
-  if(allMedia.length===0){ const ph=document.createElement('div'); ph.className='w-full h-48 flex items-center justify-center text-gray-400 bg-gray-200 rounded-xl'; ph.textContent='No media'; carousel.appendChild(ph); }
-  else allMedia.forEach(m=>carousel.appendChild(createMediaSlide(m.src,m.type)));
-  carouselContainer.appendChild(carousel); card.appendChild(carouselContainer);
+  const card = document.createElement('article');
+  card.className =
+    'card bg-white rounded-xl overflow-hidden shadow hover:shadow-lg flex flex-col';
 
-  const body=document.createElement('div'); body.className='card-body p-4 flex flex-col gap-3';
-  const title=document.createElement('h3'); title.className='text-lg font-semibold text-gray-900'; title.textContent=p.title||'Property';
-  const price=document.createElement('span'); price.className='text-[#0f2b3d] font-bold'; price.textContent=INR(p.price);
-  const sub=document.createElement('p'); sub.className='text-gray-600 text-sm';
-  let builtupText = p.builtupArea ? ` | Built-up: ${p.builtupArea} sq ft` : '';
-  sub.textContent=`${p.bedrooms} Bed | ${p.bathrooms} Bath | Carpet: ${p.carpetArea} sq ft${builtupText} | ${p.location}`;
-  
-  const ctaRow=document.createElement('div'); ctaRow.className='mt-2 flex flex-wrap gap-2';
-  const details=document.createElement('a'); details.href=`property-details.html?id=${p._id}`;details.target='_blank'; details.className='px-3 py-2 rounded bg-[#0f2b3d] text-white text-sm font-semibold hover:bg-[#15425c]'; details.textContent='View Details';
-  const call=document.createElement('a'); call.href='tel:+917039199717'; call.className='px-3 py-2 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700'; call.textContent='Call';
-  ctaRow.append(details,call);
+  /* ---------- Carousel ---------- */
+  const carousel = document.createElement('div');
+  carousel.className = 'carousel';
 
-  body.append(title,price,sub,ctaRow); card.appendChild(body);
+  const media = [
+    ...(p.images || []).map(i => ({ src: i, type: 'image' })),
+    ...(p.videos || []).map(v => ({ src: v, type: 'video' }))
+  ];
+
+  if (media.length) {
+    media.forEach(m =>
+      carousel.appendChild(createMediaSlide(m.src, m.type))
+    );
+  } else {
+    const placeholder = document.createElement('div');
+    placeholder.className =
+      'w-full h-48 flex items-center justify-center text-gray-400 bg-gray-200';
+    placeholder.textContent = 'No media available';
+    carousel.appendChild(placeholder);
+  }
+
+  card.appendChild(carousel);
+
+  /* ---------- Body ---------- */
+  const body = document.createElement('div');
+  body.className = 'card-body p-4 flex flex-col gap-3';
+
+  /* Title */
+  const title = document.createElement('h3');
+  title.className = 'text-lg font-semibold text-gray-900';
+  title.textContent = p.title || 'Property';
+
+  body.appendChild(title);
+
+  /* Price (only if valid) */
+  if (p.price && Number(p.price) > 0) {
+    const price = document.createElement('span');
+    price.className = 'text-[#0f2b3d] font-bold';
+    price.textContent = INR(p.price);
+    body.appendChild(price);
+  }
+
+  /* Details (clean & conditional) */
+  const detailsArr = [];
+
+  if (p.bedrooms && Number(p.bedrooms) > 0)
+    detailsArr.push(`${p.bedrooms} Bed`);
+
+  if (p.bathrooms && Number(p.bathrooms) > 0)
+    detailsArr.push(`${p.bathrooms} Bath`);
+
+  if (p.carpetArea)
+    detailsArr.push(`Carpet: ${p.carpetArea} sq ft`);
+
+  if (p.builtupArea)
+    detailsArr.push(`Built-up: ${p.builtupArea} sq ft`);
+
+  if (p.location)
+    detailsArr.push(p.location);
+
+  if (detailsArr.length) {
+    const sub = document.createElement('p');
+    sub.className = 'text-gray-600 text-sm';
+    sub.textContent = detailsArr.join(' | ');
+    body.appendChild(sub);
+  }
+
+  /* CTA Buttons */
+  const ctaRow = document.createElement('div');
+  ctaRow.className = 'mt-2 flex flex-wrap gap-2';
+
+  const detailsBtn = document.createElement('a');
+  detailsBtn.href = `property-details.html?id=${p._id}`;
+  detailsBtn.target = '_blank';
+  detailsBtn.className =
+    'px-3 py-2 rounded bg-[#0f2b3d] text-white text-sm font-semibold hover:bg-[#15425c]';
+  detailsBtn.textContent = 'View Details';
+
+  const callBtn = document.createElement('a');
+  callBtn.href = 'tel:+917039199717';
+  callBtn.className =
+    'px-3 py-2 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700';
+  callBtn.textContent = 'Call';
+
+  ctaRow.append(detailsBtn, callBtn);
+  body.appendChild(ctaRow);
+
+  card.appendChild(body);
   return card;
 }
 
