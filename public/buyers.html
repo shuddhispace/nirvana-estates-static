@@ -24,6 +24,9 @@ body { background-color: #f9fafb; }
 .carousel{
   scroll-behavior: smooth;
 }
+.card ul {
+  list-style: disc !important;
+}
 
 </style>
 </head>
@@ -138,6 +141,49 @@ function fixMediaUrl(src){
   return `${BACKEND}/${src.replace(/^\/+/, '')}`;
 }
 
+function renderDescription(desc) {
+  if (!desc) return '';
+
+  const lines = desc.split(/\r?\n/);
+
+  let html = '';
+  let inList = false;
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    // Empty line → close list if open
+    if (trimmed === '') {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      return;
+    }
+
+    // Bullet detection: -, *, •
+    const isBullet = /^[-*•]\s+/.test(trimmed);
+
+    if (isBullet) {
+      if (!inList) {
+        html += '<ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">';
+        inList = true;
+      }
+      html += `<li>${trimmed.replace(/^[-*•]\s+/, '')}</li>`;
+    } else {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      html += `<p class="text-sm text-gray-700 mb-2">${trimmed}</p>`;
+    }
+  });
+
+  // Close list if file ends with bullets
+  if (inList) html += '</ul>';
+
+  return html;
+}
 
 function createMediaSlide(src,type){
   const div=document.createElement('div');
@@ -239,6 +285,11 @@ function propertyCard(p){
   body.append(title);
   if (p.price) body.append(price);
   if (meta.length) body.append(sub);
+  if (p.description) {
+  const descBlock = document.createElement('div');
+  descBlock.innerHTML = renderDescription(p.description);
+  body.appendChild(descBlock);
+}
   body.append(ctaRow);
 
   card.appendChild(body);

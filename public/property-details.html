@@ -154,7 +154,7 @@
   <!-- Description -->
   <section class="prose prose-sm max-w-none text-gray-800">
     <h3 class="text-lg font-semibold mb-2">Description</h3>
-    <p id="property-desc"></p>
+    <div id="property-desc"></div>
   </section>
 
   <!-- CTA Buttons -->
@@ -289,8 +289,14 @@ async function loadDetails() {
       infoGrid.appendChild(cell('Category', p.category));
 
     /* ---------- Description ---------- */
-    document.getElementById('property-desc').textContent =
-      p.description || 'No description provided.';
+    const descEl = document.getElementById('property-desc');
+
+if (p.description) {
+  descEl.innerHTML = renderDescription(p.description);
+} else {
+  descEl.innerHTML = '<p class="text-sm text-gray-500">No description provided.</p>';
+}
+
 
     /* ---------- CTA ---------- */
     document.getElementById('call-btn').href = 'tel:+917039199717';
@@ -303,6 +309,48 @@ async function loadDetails() {
     document.getElementById('gallery').innerHTML =
       '<p class="text-red-600">Failed to load property details.</p>';
   }
+}
+
+function renderDescription(desc) {
+  if (!desc) return '';
+
+  const lines = desc.split(/\r?\n/);
+  let html = '';
+  let inList = false;
+
+  lines.forEach(line => {
+    const trimmed = line.trim();
+
+    // Empty line → close bullet list
+    if (trimmed === '') {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      return;
+    }
+
+    // Detect bullets: -, *, •
+    const isBullet = /^[-*•]\s+/.test(trimmed);
+
+    if (isBullet) {
+      if (!inList) {
+        html += '<ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">';
+        inList = true;
+      }
+      html += `<li>${trimmed.replace(/^[-*•]\s+/, '')}</li>`;
+    } else {
+      if (inList) {
+        html += '</ul>';
+        inList = false;
+      }
+      html += `<p class="text-sm text-gray-700 mb-2">${trimmed}</p>`;
+    }
+  });
+
+  if (inList) html += '</ul>';
+
+  return html;
 }
 
 loadDetails();
