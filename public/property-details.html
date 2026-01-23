@@ -8,19 +8,26 @@
 <style>
   body { background-color: #f9fafb; }
 
-  /* Carousel / Gallery */
-  .carousel { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 1rem; padding: 0.5rem 0; -webkit-overflow-scrolling: touch; }
+  /* ---------- Carousel / Gallery ---------- */
+  .carousel { display: flex; overflow-x: auto; gap: 1rem; padding: 0.5rem 0; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; cursor: grab; }
+  .carousel:active { cursor: grabbing; }
   .carousel::-webkit-scrollbar { display: none; }
-  .carousel-item { flex: 0 0 auto; scroll-snap-align: start; border-radius: 0.75rem; overflow: hidden; background: #000; position: relative; width: 250px; height: 450px; display: flex; align-items: center; justify-content: center; }
-  .carousel-item img, .carousel-item iframe, .carousel-item video { width: 100%; height: 100%; object-fit: cover; border-radius: 0.75rem; }
 
-  /* Info grid */
+  .carousel-item { flex: 0 0 auto; scroll-snap-align: start; border-radius: 0.75rem; overflow: hidden; background: #000; display: flex; justify-content: center; align-items: center; width: 250px; height: 400px; }
+  @media(min-width:768px){ .carousel-item { width: 300px; height: 400px; } }
+  @media(min-width:1024px){ .carousel-item { width: 350px; height: 420px; } }
+
+  .media-wrapper { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+  .short-media { width: 100%; height: 100%; object-fit: contain; border-radius: 0.75rem; transition: transform .3s; }
+  .short-media:hover { transform: scale(1.02); }
+
+  /* ---------- Info grid ---------- */
   .info-card { background: #fff; border-radius: 1rem; padding: 1rem; box-shadow: 0 6px 20px rgba(0,0,0,0.08); }
   .info-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 1rem; }
   @media(min-width:1024px){ .info-grid { grid-template-columns: repeat(3,1fr); } }
   .info-grid div span { font-weight: 600; }
 
-  /* CTA Buttons */
+  /* ---------- CTA Buttons ---------- */
   .cta-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; }
   .cta-call { background-color: #0f2b3d; color: #fff; }
   .cta-call:hover { background-color: #15425c; }
@@ -30,14 +37,7 @@
   .floating-call { position: fixed; bottom: 1rem; right: 1rem; background-color: #0f2b3d; color: #fff; padding: 0.75rem 1rem; border-radius: 9999px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,0,0,.2); z-index: 50; transition: background 0.2s; }
   .floating-call:hover { background-color: #15425c; }
 
-  /* Text & Typography */
   .prose { max-width: 100%; line-height: 1.6; }
-
-  @media(min-width:1024px){
-  .carousel{
-    overflow-x: hidden;
-  }
-}
 
 </style>
 </head>
@@ -46,91 +46,10 @@
 <!-- Header -->
 <div id="header-placeholder"></div>
 <script>
-  fetch('header_main.html')
-    .then(response => response.text())
-    .then(data => {
-      document.getElementById('header-placeholder').innerHTML = data;
-
-      const menuToggle = document.getElementById('menu-toggle');
-      const mobileMenu = document.getElementById('mobile-menu');
-      const line1 = document.getElementById('line1');
-      const line2 = document.getElementById('line2');
-      const header = document.getElementById('header');
-      const headerContent = document.getElementById('header-content');
-      const logo = document.getElementById('logo');
-      const nameImg = document.getElementById('name-img');
-
-      // Apply slide animation classes
-      mobileMenu.style.transition = "max-height 0.35s ease, opacity 0.35s ease";
-      mobileMenu.style.overflow = "hidden";
-      mobileMenu.style.maxHeight = "0";
-      mobileMenu.style.opacity = "0";
-
-      const toggleMenu = () => {
-        const isOpening = mobileMenu.style.maxHeight === "0px" || mobileMenu.style.maxHeight === "0";
-        
-        if (isOpening) {
-          mobileMenu.classList.remove('hidden');
-          mobileMenu.style.maxHeight = mobileMenu.scrollHeight + "px";
-          mobileMenu.style.opacity = "1";
-          line1.style.transform = 'rotate(45deg) translate(4px, 4px)';
-          line2.style.transform = 'rotate(-45deg) translate(4px, -4px)';
-        } else {
-          mobileMenu.style.maxHeight = "0";
-          mobileMenu.style.opacity = "0";
-          setTimeout(() => mobileMenu.classList.add('hidden'), 350);
-          line1.style.transform = 'rotate(0deg) translate(0, 0)';
-          line2.style.transform = 'rotate(0deg) translate(0, 0)';
-        }
-      };
-
-      menuToggle.addEventListener('click', toggleMenu);
-
-      // Close on menu link click
-      mobileMenu.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-          mobileMenu.style.maxHeight = "0";
-          mobileMenu.style.opacity = "0";
-          setTimeout(() => mobileMenu.classList.add('hidden'), 350);
-          line1.style.transform = 'rotate(0deg) translate(0, 0)';
-          line2.style.transform = 'rotate(0deg) translate(0, 0)';
-        });
-      });
-
-      // Close on click outside
-      document.addEventListener('click', (e) => {
-        const isClickInside = mobileMenu.contains(e.target) || menuToggle.contains(e.target);
-        const isOpen = mobileMenu.style.maxHeight !== "0" && !mobileMenu.classList.contains('hidden');
-
-        if (!isClickInside && isOpen) {
-          mobileMenu.style.maxHeight = "0";
-          mobileMenu.style.opacity = "0";
-          setTimeout(() => mobileMenu.classList.add('hidden'), 350);
-          line1.style.transform = 'rotate(0deg) translate(0, 0)';
-          line2.style.transform = 'rotate(0deg) translate(0, 0)';
-        }
-      });
-
-      // Shrink header on scroll
-      window.addEventListener('scroll', () => {
-        if (window.scrollY > 50) {
-          header.classList.add('shadow-lg');
-          headerContent.classList.add('h-16', 'md:h-20');
-          logo.classList.add('h-10', 'md:h-14');
-          logo.classList.remove('h-12', 'md:h-16');
-          nameImg.classList.add('h-5', 'md:h-6');
-          nameImg.classList.remove('h-6', 'md:h-8');
-        } else {
-          header.classList.remove('shadow-lg');
-          headerContent.classList.remove('h-16', 'md:h-20');
-          logo.classList.remove('h-10', 'md:h-14');
-          logo.classList.add('h-12', 'md:h-16');
-          nameImg.classList.remove('h-5', 'md:h-6');
-          nameImg.classList.add('h-6', 'md:h-8');
-        }
-      });
-    })
-    .catch(err => console.error('Failed to load header:', err));
+fetch('header_main.html')
+  .then(res=>res.text())
+  .then(data=>document.getElementById('header-placeholder').innerHTML=data)
+  .catch(err=>console.error(err));
 </script>
 
 <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
@@ -168,204 +87,100 @@
 <!-- Floating Call Button -->
 <a href="tel:+917039199717" class="floating-call">📞 Call Now</a>
 
-
-
 <script>
-const INR = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
+const INR=new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'});
 
-// Create gallery slide
+function fixMediaUrl(src){ return src.startsWith('http')?src:`https://nirvana-estates-backend.onrender.com/${src.replace(/^\/+/,'')}`; }
+
 function createSlide(src,type){
-  const wrap = document.createElement('div');
-  wrap.className = 'carousel-item';
-  if(type==='image'){ const img = new Image(); img.src=src; wrap.appendChild(img); }
-  else{
-    if(src.includes('youtube.com') || src.includes('youtu.be')){
-      let videoId='';
-      if(src.includes('shorts/')) videoId=src.split('shorts/')[1].split('?')[0];
-      else if(src.includes('youtu.be/')) videoId=src.split('youtu.be/')[1].split('?')[0];
-      else if(src.includes('watch?v=')) videoId=src.split('watch?v=')[1].split('&')[0];
-      const iframe = document.createElement('iframe');
-      // iframe.src = `https://www.youtube.com/embed/${videoId}?rel=0&autoplay=0`;
-      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
-      iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
-      iframe.allowFullscreen = true;
-      wrap.appendChild(iframe);
+  const wrapper=document.createElement('div'); wrapper.className='carousel-item';
+  const mediaWrap=document.createElement('div'); mediaWrap.className='media-wrapper';
+
+  if(type==='image'){
+    const img=new Image(); img.src=fixMediaUrl(src); img.className='short-media'; mediaWrap.appendChild(img);
+  } else {
+    if(src.includes('youtube.com')||src.includes('youtu.be')){
+      let vidId=''; if(src.includes('shorts/')) vidId=src.split('shorts/')[1].split('?')[0];
+      else if(src.includes('youtu.be/')) vidId=src.split('youtu.be/')[1].split('?')[0];
+      else if(src.includes('watch?v=')) vidId=src.split('watch?v=')[1].split('&')[0];
+      const iframe=document.createElement('iframe');
+      iframe.src=`https://www.youtube-nocookie.com/embed/${vidId}?rel=0`;
+      iframe.allow='accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+      iframe.allowFullscreen=true; iframe.className='short-media'; mediaWrap.appendChild(iframe);
     } else {
-      const vid = document.createElement('video'); vid.src=src; vid.preload='metadata'; vid.muted=true; vid.playsInline=true; vid.controls=true;
-      wrap.appendChild(vid);
+      const vid=document.createElement('video'); vid.src=fixMediaUrl(src); vid.preload='metadata';
+      vid.muted=true; vid.playsInline=true; vid.controls=true; vid.className='short-media'; mediaWrap.appendChild(vid);
     }
   }
-  return wrap;
+
+  wrapper.appendChild(mediaWrap); return wrapper;
 }
 
-// Load property details
-async function loadDetails() {
-  const params = new URLSearchParams(location.search);
-  const id = params.get('id');
+function renderDescription(desc){
+  if(!desc) return '';
+  const lines=desc.split(/\r?\n/); let html='', inList=false;
+  lines.forEach(line=>{
+    const t=line.trim();
+    if(!t){ if(inList){ html+='</ul>'; inList=false; } return; }
+    const isBullet=/^[-*•]\s+/.test(t);
+    if(isBullet){ if(!inList){ html+='<ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">'; inList=true; }
+      html+=`<li>${t.replace(/^[-*•]\s+/,'')}</li>`;
+    } else { if(inList){ html+='</ul>'; inList=false; } html+=`<p class="text-sm text-gray-700 mb-2">${t}</p>`; }
+  });
+  if(inList) html+='</ul>'; return html;
+}
 
-  if (!id) {
-    document.getElementById('gallery').innerHTML =
-      '<p class="text-red-600">Invalid property ID.</p>';
-    return;
-  }
+async function loadDetails(){
+  const id=new URLSearchParams(location.search).get('id');
+  if(!id){ document.getElementById('gallery').innerHTML='<p class="text-red-600">Invalid property ID.</p>'; return; }
 
-  try {
-    const res = await fetch('https://nirvana-estates-backend.onrender.com/api/properties');
-    if (!res.ok) throw new Error('API failed');
+  try{
+    const res=await fetch('https://nirvana-estates-backend.onrender.com/api/properties');
+    if(!res.ok) throw new Error('API failed');
+    const all=await res.json(); const p=all.find(x=>String(x._id)===String(id));
+    if(!p){ document.getElementById('gallery').innerHTML='<p class="text-red-600">Property not found.</p>'; return; }
 
-    const all = await res.json();
-    const p = all.find(x => String(x._id) === String(id));
-
-    if (!p) {
-      document.getElementById('gallery').innerHTML =
-        '<p class="text-red-600">Property not found.</p>';
-      return;
-    }
-
-    /* ---------- Gallery ---------- */
-    const gallery = document.getElementById('gallery');
-    gallery.innerHTML = '';
-
-    const track = document.createElement('div');
-    track.className = 'carousel';
-
-    const media = [
-      ...(Array.isArray(p.images) ? p.images.map(s => ({ src: s, type: 'image' })) : []),
-      ...(Array.isArray(p.videos) ? p.videos.map(s => ({ src: s, type: 'video' })) : [])
-    ];
-
-    if (media.length) {
-      media.forEach(m => track.appendChild(createSlide(m.src, m.type)));
-    } else {
-      const ph = document.createElement('div');
-      ph.className =
-        'w-full h-64 flex items-center justify-center bg-gray-200 text-gray-500 rounded';
-      ph.textContent = 'No media available';
-      track.appendChild(ph);
-    }
-
+    // ---------- Gallery ----------
+    const gallery=document.getElementById('gallery'); gallery.innerHTML='';
+    const track=document.createElement('div'); track.className='carousel';
+    const media=[...(p.images||[]).map(s=>({src:s,type:'image'})), ...(p.videos||[]).map(s=>({src:s,type:'video'}))];
+    if(media.length) media.forEach(m=>track.appendChild(createSlide(m.src,m.type)));
+    else { const ph=document.createElement('div'); ph.className='w-full h-64 flex items-center justify-center bg-gray-200 text-gray-500 rounded'; ph.textContent='No media available'; track.appendChild(ph); }
     gallery.appendChild(track);
 
-    /* ---------- Title ---------- */
-    document.getElementById('property-title').textContent =
-      p.title || 'Property';
+    // ---------- Title & Price ----------
+    document.getElementById('property-title').textContent=p.title||'Property';
+    const priceEl=document.getElementById('property-price');
+    if(p.price && Number(p.price)>0){ priceEl.textContent=INR.format(p.price); priceEl.classList.remove('hidden'); } 
+    else{ priceEl.textContent=''; priceEl.classList.add('hidden'); }
 
-    /* ---------- Price (only if valid) ---------- */
-    const priceEl = document.getElementById('property-price');
-    if (p.price && Number(p.price) > 0) {
-      priceEl.textContent = INR.format(p.price);
-      priceEl.classList.remove('hidden');
-    } else {
-      priceEl.textContent = '';
-      priceEl.classList.add('hidden');
-    }
+    // ---------- Info Grid ----------
+    const infoGrid=document.getElementById('info-grid'); infoGrid.innerHTML='';
+    const cell=(label,value)=>{ const d=document.createElement('div'); d.innerHTML=`<span>${label}:</span> ${value}`; return d; };
+    if(p.bedrooms) infoGrid.appendChild(cell('Bedrooms',p.bedrooms));
+    if(p.bathrooms) infoGrid.appendChild(cell('Bathrooms',p.bathrooms));
+    if(p.carpetArea) infoGrid.appendChild(cell('Carpet Area',`${p.carpetArea} sq ft`));
+    if(p.builtupArea) infoGrid.appendChild(cell('Built-up Area',`${p.builtupArea} sq ft`));
+    if(p.location) infoGrid.appendChild(cell('Location',p.location));
+    if(p.category) infoGrid.appendChild(cell('Category',p.category));
 
-    /* ---------- Info Grid ---------- */
-    const infoGrid = document.getElementById('info-grid');
-    infoGrid.innerHTML = '';
+    // ---------- Description ----------
+    document.getElementById('property-desc').innerHTML=p.description?renderDescription(p.description):'<p class="text-sm text-gray-500">No description provided.</p>';
 
-    const cell = (label, value) => {
-      const d = document.createElement('div');
-      d.innerHTML = `<span>${label}:</span> ${value}`;
-      return d;
-    };
+    // ---------- CTA ----------
+    document.getElementById('call-btn').href='tel:+917039199717';
+    document.getElementById('wa-btn').href='https://wa.me/917039199717?text='+encodeURIComponent(`I am interested in property: ${p.title||p._id}`);
 
-    if (p.bedrooms && Number(p.bedrooms) > 0)
-      infoGrid.appendChild(cell('Bedrooms', p.bedrooms));
-
-    if (p.bathrooms && Number(p.bathrooms) > 0)
-      infoGrid.appendChild(cell('Bathrooms', p.bathrooms));
-
-    if (p.carpetArea)
-      infoGrid.appendChild(cell('Carpet Area', `${p.carpetArea} sq ft`));
-
-    if (p.builtupArea)
-      infoGrid.appendChild(cell('Built-up Area', `${p.builtupArea} sq ft`));
-
-    if (p.location)
-      infoGrid.appendChild(cell('Location', p.location));
-
-    if (p.category)
-      infoGrid.appendChild(cell('Category', p.category));
-
-    /* ---------- Description ---------- */
-    const descEl = document.getElementById('property-desc');
-
-if (p.description) {
-  descEl.innerHTML = renderDescription(p.description);
-} else {
-  descEl.innerHTML = '<p class="text-sm text-gray-500">No description provided.</p>';
-}
-
-
-    /* ---------- CTA ---------- */
-    document.getElementById('call-btn').href = 'tel:+917039199717';
-    document.getElementById('wa-btn').href =
-      'https://wa.me/917039199717?text=' +
-      encodeURIComponent(`I am interested in property: ${p.title || p._id}`);
-
-  } catch (e) {
-    console.error(e);
-    document.getElementById('gallery').innerHTML =
-      '<p class="text-red-600">Failed to load property details.</p>';
-  }
-}
-
-function renderDescription(desc) {
-  if (!desc) return '';
-
-  const lines = desc.split(/\r?\n/);
-  let html = '';
-  let inList = false;
-
-  lines.forEach(line => {
-    const trimmed = line.trim();
-
-    // Empty line → close bullet list
-    if (trimmed === '') {
-      if (inList) {
-        html += '</ul>';
-        inList = false;
-      }
-      return;
-    }
-
-    // Detect bullets: -, *, •
-    const isBullet = /^[-*•]\s+/.test(trimmed);
-
-    if (isBullet) {
-      if (!inList) {
-        html += '<ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">';
-        inList = true;
-      }
-      html += `<li>${trimmed.replace(/^[-*•]\s+/, '')}</li>`;
-    } else {
-      if (inList) {
-        html += '</ul>';
-        inList = false;
-      }
-      html += `<p class="text-sm text-gray-700 mb-2">${trimmed}</p>`;
-    }
-  });
-
-  if (inList) html += '</ul>';
-
-  return html;
+  }catch(e){ console.error(e); document.getElementById('gallery').innerHTML='<p class="text-red-600">Failed to load property details.</p>'; }
 }
 
 loadDetails();
 </script>
 
 <!-- Footer -->
-  <!-- Copyright Bar -->
-  <div class="bg-[#0f2b3d] text-gray-300 text-center text-sm py-4">
-    © <span id="year"></span> Nirvana Estates. All rights reserved.
-  </div>
-
-</footer>
-
-<script>
-  document.getElementById('year').textContent = new Date().getFullYear();
-</script>
+<div class="bg-[#0f2b3d] text-gray-300 text-center text-sm py-4">
+  © <span id="year"></span> Nirvana Estates. All rights reserved.
+</div>
+<script>document.getElementById('year').textContent=new Date().getFullYear();</script>
 </body>
 </html>
