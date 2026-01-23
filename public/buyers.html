@@ -285,11 +285,6 @@ function propertyCard(p){
   body.append(title);
   if (p.price) body.append(price);
   if (meta.length) body.append(sub);
-  if (p.description) {
-  const descBlock = document.createElement('div');
-  descBlock.innerHTML = renderDescription(p.description);
-  body.appendChild(descBlock);
-}
   body.append(ctaRow);
 
   card.appendChild(body);

@@ -278,16 +278,6 @@ function propertyCard(p){
     body.appendChild(sub);
   }
 
-  /* ---------- Description ---------- */
-const descriptionText =
-  p.description || p.desc || p.details || p.propertyDescription;
-
-if (descriptionText) {
-  const desc = document.createElement('div');
-  desc.innerHTML = renderDescription(descriptionText);
-  body.appendChild(desc);
-}
-
   /* CTA Buttons */
   const ctaRow = document.createElement('div');
   ctaRow.className = 'mt-2 flex flex-wrap gap-2';
